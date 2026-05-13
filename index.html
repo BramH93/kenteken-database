@@ -4,139 +4,389 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kenteken Database</title>
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <style>
-/* (je bestaande CSS blijft exact hetzelfde — niet aangepast) */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Courier New', Courier, monospace; background:#f5f4f0; padding:30px;}
-.upload-zone {border:2px dashed #aaa;padding:40px;text-align:center;margin-top:10px;cursor:pointer;}
-.file-item {margin:5px 0;}
-.btn {padding:8px 12px;margin-top:10px;cursor:pointer;}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0; --surface: #ffffff; --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text2: #6b6b66; --text3: #a0a09a;
+    --green: #1D9E75; --green-bg: #EAF3DE; --green-text: #3B6D11;
+    --amber: #BA7517; --amber-bg: #FAEEDA; --amber-text: #854F0B;
+    --red: #E24B4A; --red-bg: #FCEBEB; --red-text: #A32D2D;
+    --blue-bg: #E6F1FB; --blue-text: #185FA5;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: 'Courier New', Courier, monospace; background: var(--bg); color: var(--text); min-height: 100vh; padding: 32px 24px; }
+  .wrapper { max-width: 980px; margin: 0 auto; }
+  header { margin-bottom: 28px; }
+  header h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; }
+  header p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border2); margin-bottom: 24px; }
+  .tab { font-family: 'Courier New', monospace; font-size: 13px; padding: 10px 20px; cursor: pointer; border: none; background: none; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .count-pill { font-size: 11px; background: var(--surface2); padding: 1px 7px; border-radius: 20px; }
+
+  .upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 48px 24px; text-align: center; cursor: pointer; background: var(--surface); transition: background 0.15s, border-color 0.15s; margin-bottom: 16px; }
+  .upload-zone:hover, .upload-zone.drag { background: var(--surface2); border-color: #888; }
+  .upload-zone i { font-size: 36px; color: var(--text3); display: block; margin-bottom: 12px; }
+  .upload-zone .main-label { font-size: 15px; font-weight: 500; }
+  .upload-zone .sub-label { font-size: 12px; color: var(--text2); margin-top: 6px; }
+  #file-input { display: none; }
+
+  /* File queue cards */
+  .file-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; }
+  .file-card-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
+  .file-card-header i { color: var(--text3); font-size: 16px; flex-shrink: 0; }
+  .file-card-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-card-datum { font-size: 11px; color: var(--text2); white-space: nowrap; }
+  .file-card-status { font-size: 12px; white-space: nowrap; }
+  .file-card-status.done { color: var(--green); }
+  .file-card-status.pending { color: var(--text3); }
+  .file-card-status.error { color: var(--red); }
+  .file-card-body { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .file-card-body label { font-size: 11px; color: var(--text2); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.4px; }
+  .file-card-body input[type=text] { flex: 1; font-family: 'Courier New', monospace; font-size: 13px; padding: 7px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); outline: none; }
+  .file-card-body input[type=text]:focus { border-color: #555; background: var(--surface); }
+  .file-card-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 2px; flex-shrink: 0; }
+  .file-card-del:hover { color: var(--red); }
+
+  .btn { font-family: 'Courier New', monospace; font-size: 13px; padding: 8px 16px; cursor: pointer; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface); color: var(--text); transition: background 0.1s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { background: var(--surface2); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn.primary { background: var(--text); color: var(--surface); border-color: var(--text); }
+  .btn.primary:hover { opacity: 0.85; }
+  .btn.danger { color: var(--red); border-color: #F09595; }
+  .btn.danger:hover { background: var(--red-bg); }
+
+  .action-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px 16px; }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-val { font-size: 24px; font-weight: 500; }
+  .stat-val.green { color: var(--green); }
+  .stat-val.amber { color: var(--amber); }
+
+  .log { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; color: var(--text2); max-height: 90px; overflow-y: auto; margin-bottom: 20px; line-height: 1.8; }
+  .log-line.ok { color: var(--green); }
+  .log-line.warn { color: var(--amber); }
+  .log-line.err { color: var(--red); }
+
+  .controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .controls input[type=text] { flex: 1; min-width: 180px; font-family: 'Courier New', monospace; font-size: 13px; padding: 8px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+  .controls input[type=text]:focus { border-color: #555; }
+
+  .table-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--surface2); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); border-bottom: 0.5px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .badge-nl { display: inline-block; background: #003DA5; color: #FFCC00; font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; padding: 3px 10px; border-radius: 4px; border: 2px solid #FFCC00; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge.blue { background: var(--blue-bg); color: var(--blue-text); }
+  .badge.amber { background: var(--amber-bg); color: var(--amber-text); }
+  .badge.gray { background: var(--surface2); color: var(--text2); }
+  .empty { text-align: center; padding: 48px; color: var(--text3); font-size: 14px; }
+  .pagination { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; color: var(--text2); }
+
+  @media (max-width: 600px) { body { padding: 16px; } }
 </style>
 </head>
-
 <body>
+<div class="wrapper">
+  <header>
+    <h1>🚗 Kenteken Database</h1>
+    <p>Upload meerdere Excel-bestanden, vul per bestand de klantnaam in en sla kentekens op.</p>
+  </header>
 
-<h2>🚗 Kenteken Database</h2>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('upload')"><i class="ti ti-upload"></i> Upload</button>
+    <button class="tab" onclick="switchTab('database')"><i class="ti ti-database"></i> Database <span class="count-pill" id="db-count">0</span></button>
+  </div>
 
-<!-- ✅ NIEUW: BULK KLANT -->
-<div style="margin-bottom:10px;">
-  <input type="text" id="bulk-klant" placeholder="Naam klant voor deze upload">
+  <!-- UPLOAD TAB -->
+  <div class="tab-content active" id="tab-upload">
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" role="button" tabindex="0">
+      <i class="ti ti-files"></i>
+      <div class="main-label">Klik om bestanden te selecteren</div>
+      <div class="sub-label">of sleep ze hiernaartoe &nbsp;·&nbsp; meerdere bestanden tegelijk &nbsp;·&nbsp; .xlsx, .xls, .csv</div>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple>
+
+    <div id="file-queue"></div>
+
+    <div class="action-row" id="action-row" style="display:none">
+      <button class="btn primary" onclick="processAll()"><i class="ti ti-player-play"></i> Verwerk alle bestanden</button>
+      <button class="btn" onclick="clearQueue()"><i class="ti ti-x"></i> Wachtrij wissen</button>
+    </div>
+
+    <div class="stats-row" id="stats" style="display:none">
+      <div class="stat"><div class="stat-label">Totaal in DB</div><div class="stat-val" id="s-total">0</div></div>
+      <div class="stat"><div class="stat-label">Nieuw toegevoegd</div><div class="stat-val green" id="s-found">0</div></div>
+      <div class="stat"><div class="stat-label">Duplicaten</div><div class="stat-val amber" id="s-dup">0</div></div>
+      <div class="stat"><div class="stat-label">Bestanden verwerkt</div><div class="stat-val" id="s-files">0</div></div>
+    </div>
+
+    <div class="log" id="log" style="display:none"></div>
+  </div>
+
+  <!-- DATABASE TAB -->
+  <div class="tab-content" id="tab-database">
+    <div class="controls">
+      <input type="text" id="search" placeholder="Zoek op kenteken, klant of datum..." oninput="dbPage=1;renderTable()">
+      <button class="btn" onclick="exportCSV()"><i class="ti ti-download"></i> Exporteer CSV</button>
+      <button class="btn danger" onclick="clearDB()"><i class="ti ti-trash"></i> Wis alles</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Kenteken</th><th>Klant</th><th>Datum gemeld</th><th>Bronbestand</th><th>Toegevoegd op</th></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
 </div>
-
-<div class="upload-zone" onclick="fileInput.click()">
-Klik om bestanden te kiezen
-</div>
-
-<input type="file" id="fileInput" multiple style="display:none">
-
-<div id="queue"></div>
-
-<button class="btn" onclick="processAll()">Verwerken</button>
 
 <script>
-let db = [];
-let fileQueue = [];
+let db = [], fileQueue = [], dbPage = 1;
+const perPage = 20;
+let sessionNew = 0, sessionDup = 0, sessionFiles = 0;
+try { db = JSON.parse(localStorage.getItem('kt_db') || '[]'); } catch(e) {}
 
-const PATRONEN = [
- /\b([A-Z]{2}-?\d{2}-?\d{2})\b/g,
- /\b(\d{2}-?\d{2}-?[A-Z]{2})\b/g,
- /\b([A-Z]{2}-?\d{2}-?[A-Z]{2})\b/g,
-];
-
-function detectKentekens(text) {
-  let res = new Set();
-  text = String(text).toUpperCase();
-  
-  PATRONEN.forEach(p => {
-    let m;
-    while ((m = p.exec(text)) !== null) {
-      res.add(m[1].replace(/-/g, '-'));
-    }
+function switchTab(name) {
+  ['upload','database'].forEach((n,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n === name);
+    document.getElementById('tab-' + n).classList.toggle('active', n === name);
   });
-
-  return [...res];
+  if (name === 'database') renderTable();
 }
 
-fileInput.addEventListener('change', e => {
-  const bulkKlant = document.getElementById('bulk-klant').value.trim();
+function saveDB() { try { localStorage.setItem('kt_db', JSON.stringify(db)); } catch(e) {} }
 
-  Array.from(e.target.files).forEach(f => {
-    fileQueue.push({
-      file: f,
-      klant: bulkKlant || 'Onbekend',
-      status: 'pending'
-    });
+// ── Datum uit bestandsnaam ─────────────────────────────
+function extractDatum(filename) {
+  const fn = filename.replace(/\.[^.]+$/, '');
+  const patterns = [
+    { re: /(\d{4})[-_.](\d{2})[-_.](\d{2})/, fn: m => `${m[3]}-${m[2]}-${m[1]}` },
+    { re: /(\d{2})[-_.](\d{2})[-_.](\d{4})/, fn: m => `${m[1]}-${m[2]}-${m[3]}` },
+    { re: /(\d{2})(\d{2})(\d{4})/, fn: m => `${m[1]}-${m[2]}-${m[3]}` },
+    { re: /(\d{4})(\d{2})(\d{2})(?!\d)/, fn: m => `${m[3]}-${m[2]}-${m[1]}` },
+    { re: /(\d{1,2})\s?(jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)\s?(\d{4})/i, fn: m => {
+      const mn = {jan:'01',feb:'02',mrt:'03',apr:'04',mei:'05',jun:'06',jul:'07',aug:'08',sep:'09',okt:'10',nov:'11',dec:'12'};
+      return `${m[1].padStart(2,'0')}-${mn[m[2].toLowerCase()]}-${m[3]}`;
+    }},
+  ];
+  for (const p of patterns) { const m = fn.match(p.re); if (m) return p.fn(m); }
+  return null;
+}
+
+// ── Kenteken herkenning ────────────────────────────────
+const PATRONEN = [
+  /\b([A-Z]{2}[-\s]?\d{2}[-\s]?\d{2})\b/,/\b(\d{2}[-\s]?\d{2}[-\s]?[A-Z]{2})\b/,
+  /\b([A-Z]{2}[-\s]?\d{2}[-\s]?[A-Z]{2})\b/,/\b(\d{2}[-\s]?[A-Z]{2}[-\s]?\d{2})\b/,
+  /\b([A-Z]{2}[-\s]?[A-Z]{2}[-\s]?\d{2})\b/,/\b(\d{2}[-\s]?[A-Z]{2}[-\s]?[A-Z]{2})\b/,
+  /\b(\d{2}[-\s]?[A-Z]{3}[-\s]?\d)\b/,/\b(\d[-\s]?[A-Z]{3}[-\s]?\d{2})\b/,
+  /\b([A-Z]{3}[-\s]?\d{2}[-\s]?[A-Z])\b/,/\b([A-Z][-\s]?\d{3}[-\s]?[A-Z]{2})\b/,
+  /\b([A-Z]{3}[-\s]?\d[-\s]?[A-Z]{2})\b/,
+];
+function detectKentekens(val) {
+  if (!val) return [];
+  const str = String(val).toUpperCase().trim();
+  const found = new Set();
+  for (const pat of PATRONEN) { const g = new RegExp(pat.source,'g'); let m; while((m=g.exec(str))!==null) found.add(m[1].toUpperCase().replace(/[-\s]/g,'-')); }
+  return [...found];
+}
+
+// ── Queue ──────────────────────────────────────────────
+function addFilesToQueue(files) {
+  Array.from(files).forEach(file => {
+    if (!fileQueue.find(f => f.file.name === file.name))
+      fileQueue.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), file, klant: '', datum: extractDatum(file.name), status: 'pending' });
   });
-
   renderQueue();
-});
+}
+
+function removeFromQueue(id) {
+  fileQueue = fileQueue.filter(f => f.id !== id);
+  renderQueue();
+}
+
+function clearQueue() {
+  fileQueue = [];
+  document.getElementById('file-input').value = '';
+  renderQueue();
+}
 
 function renderQueue() {
-  const q = document.getElementById('queue');
-  q.innerHTML = fileQueue.map(f => `
-    <div class="file-item">
-      ${f.file.name} → <b>${f.klant}</b>
+  const container = document.getElementById('file-queue');
+  const actionRow = document.getElementById('action-row');
+  if (fileQueue.length === 0) { container.innerHTML = ''; actionRow.style.display = 'none'; return; }
+  actionRow.style.display = 'flex';
+  container.innerHTML = fileQueue.map(f => `
+    <div class="file-card" id="card-${f.id}">
+      <div class="file-card-header">
+        <i class="ti ti-file-spreadsheet"></i>
+        <span class="file-card-name" title="${f.file.name}">${f.file.name}</span>
+        <span class="file-card-datum">${f.datum ? '📅 ' + f.datum : 'Geen datum herkend'}</span>
+        <span class="file-card-status ${f.status}">${f.status==='done'?'✓ klaar':f.status==='error'?'✗ fout':''}</span>
+        <button class="file-card-del" onclick="removeFromQueue('${f.id}')" title="Verwijder uit wachtrij">×</button>
+      </div>
+      <div class="file-card-body">
+        <label for="klant-${f.id}">Klantnaam</label>
+        <input type="text" id="klant-${f.id}" placeholder="Vul klantnaam in..." value="${f.klant}" oninput="updateKlant('${f.id}', this.value)">
+      </div>
     </div>
   `).join('');
 }
 
+function updateKlant(id, value) {
+  const f = fileQueue.find(f => f.id === id);
+  if (f) f.klant = value.trim();
+}
+
+// ── Verwerken ──────────────────────────────────────────
+function addLog(msg, type='') {
+  const log = document.getElementById('log');
+  log.style.display = 'block';
+  const d = document.createElement('div');
+  d.className = 'log-line ' + type;
+  d.textContent = new Date().toLocaleTimeString('nl') + ' — ' + msg;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
 function processAll() {
-  const bulkKlant = document.getElementById('bulk-klant').value.trim();
-
-  if (!bulkKlant) {
-    alert("Vul eerst een klant in!");
-    return;
-  }
-
-  let i = 0;
+  if (!fileQueue.length) return;
+  // Sync klant values from inputs before processing
+  fileQueue.forEach(f => {
+    const el = document.getElementById('klant-' + f.id);
+    if (el) f.klant = el.value.trim();
+  });
+  sessionNew = 0; sessionDup = 0; sessionFiles = 0;
+  document.getElementById('stats').style.display = 'grid';
+  let idx = 0;
   function next() {
-    if (i >= fileQueue.length) {
-      alert("Klaar!");
-      console.log(db);
-      return;
+    if (idx >= fileQueue.length) {
+      addLog(`Klaar — ${sessionNew} nieuw, ${sessionDup} dubbel, ${sessionFiles} bestanden verwerkt.`, 'ok');
+      updateStats(); return;
     }
-
-    processOne(fileQueue[i], () => {
-      i++;
-      next();
-    });
+    processOne(fileQueue[idx], () => { idx++; next(); });
   }
-
   next();
 }
 
 function processOne(qf, cb) {
   const reader = new FileReader();
-
   reader.onload = e => {
-    const wb = XLSX.read(e.target.result, { type: 'array' });
-
-    wb.SheetNames.forEach(s => {
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[s], {header:1});
-
-      rows.forEach(r => {
-        r.forEach(c => {
-          detectKentekens(c).forEach(k => {
-            db.push({
-              kenteken: k,
-              klant: qf.klant,
-              bron: qf.file.name
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      wb.SheetNames.forEach(sheet => {
+        XLSX.utils.sheet_to_json(wb.Sheets[sheet], { header:1, defval:'' }).forEach(row => {
+          row.forEach(cell => {
+            detectKentekens(cell).forEach(kt => {
+              if (db.find(r => r.kenteken === kt)) {
+                sessionDup++;
+                addLog('Duplicaat: ' + kt, 'warn');
+              } else {
+                db.push({
+                  id: Date.now()+'_'+Math.random().toString(36).slice(2),
+                  kenteken: kt,
+                  klant: qf.klant || '—',
+                  datum: qf.datum || '—',
+                  bron: qf.file.name,
+                  toegevoegd: new Date().toLocaleString('nl-NL')
+                });
+                sessionNew++;
+                addLog('Toegevoegd: ' + kt + (qf.klant ? ' → ' + qf.klant : ''), 'ok');
+              }
             });
           });
         });
       });
-    });
-
-    cb();
+      qf.status = 'done'; sessionFiles++;
+      saveDB(); updateStats(); renderQueue(); cb();
+    } catch(err) {
+      qf.status = 'error';
+      addLog('Fout: ' + qf.file.name + ' — ' + err.message, 'err');
+      renderQueue(); cb();
+    }
   };
-
   reader.readAsArrayBuffer(qf.file);
 }
-</script>
 
+function updateStats() {
+  document.getElementById('s-total').textContent = db.length;
+  document.getElementById('s-found').textContent = sessionNew;
+  document.getElementById('s-dup').textContent = sessionDup;
+  document.getElementById('s-files').textContent = sessionFiles;
+  document.getElementById('db-count').textContent = db.length;
+}
+
+// ── Database tabel ─────────────────────────────────────
+function renderTable() {
+  const q = document.getElementById('search').value.toUpperCase();
+  const filtered = db.filter(r => !q ||
+    r.kenteken.includes(q) ||
+    (r.klant||'').toUpperCase().includes(q) ||
+    (r.datum||'').includes(q) ||
+    r.bron.toUpperCase().includes(q)
+  );
+  const start = (dbPage-1)*perPage;
+  const slice = filtered.slice(start, start+perPage);
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = filtered.length === 0
+    ? '<tr><td colspan="6" class="empty">Geen kentekens gevonden</td></tr>'
+    : slice.map((r,i) => `<tr>
+        <td style="color:var(--text3)">${start+i+1}</td>
+        <td><span class="badge-nl">${r.kenteken}</span></td>
+        <td><span class="badge ${r.klant==='—'?'amber':'blue'}">${r.klant}</span></td>
+        <td>${r.datum}</td>
+        <td style="color:var(--text2);font-size:12px">${r.bron}</td>
+        <td style="color:var(--text2);font-size:12px">${r.toegevoegd}</td>
+      </tr>`).join('');
+  const totalPages = Math.ceil(filtered.length/perPage);
+  document.getElementById('pagination').innerHTML = filtered.length > perPage
+    ? `<button class="btn" onclick="dbPage=Math.max(1,dbPage-1);renderTable()" ${dbPage===1?'disabled':''}>‹ Vorige</button>
+       <span>Pagina ${dbPage} van ${totalPages} (${filtered.length} resultaten)</span>
+       <button class="btn" onclick="dbPage=Math.min(${totalPages},dbPage+1);renderTable()" ${dbPage===totalPages?'disabled':''}>Volgende ›</button>`
+    : `<span>${filtered.length} kenteken${filtered.length!==1?'s':''}</span>`;
+}
+
+function exportCSV() {
+  if (!db.length) { alert('Database is leeg.'); return; }
+  const rows = db.map(r => `${r.kenteken},"${r.klant}","${r.datum}","${r.bron}","${r.toegevoegd}"`);
+  const blob = new Blob(['\uFEFF' + 'Kenteken,Klant,Datum gemeld,Bronbestand,Toegevoegd op\n' + rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'kentekens_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+}
+
+function clearDB() {
+  if (!confirm('Weet je zeker dat je de hele database wilt wissen?')) return;
+  db = []; saveDB(); sessionNew=0; sessionDup=0; sessionFiles=0;
+  updateStats(); renderTable();
+  document.getElementById('log').innerHTML = '';
+  addLog('Database gewist.', 'warn');
+}
+
+// ── Events ─────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => { addFilesToQueue(e.target.files); });
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); addFilesToQueue(e.dataTransfer.files); });
+dz.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') document.getElementById('file-input').click(); });
+
+// ── Init ───────────────────────────────────────────────
+updateStats();
+if (db.length > 0) document.getElementById('db-count').textContent = db.length;
+</script>
 </body>
 </html>
